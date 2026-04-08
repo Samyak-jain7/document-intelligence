@@ -1,0 +1,59 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv/
+
+# Node
+node_modules/
+.npm
+.next/
+out/
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Data (keep directories but ignore contents)
+chromadb/*
+!chromadb/.gitkeep
+uploads/*
+!uploads/.gitkeep
+
+# Docker
+.dockerignore
+
+# Backend specific
+backend/document_store.json
+backend/__pycache__/
+backend/*.pyc
+
+# Frontend specific
+frontend/.next/
+frontend/node_modules/
+
+# Misc
+*.tgz
+*.tar.gz
