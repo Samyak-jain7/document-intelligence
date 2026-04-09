@@ -5,19 +5,24 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=production
     container_name: doc-intelligence-backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
-      - ENVIRONMENT=production
-      - DEBUG=false
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DEBUG=${DEBUG:-false}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
       - OPENAI_EMBEDDING_MODEL=${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      - CHUNK_SIZE=${CHUNK_SIZE:-1000}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-200}
       - CHROMA_DB_PATH=/app/chromadb
       - UPLOAD_DIR=/app/uploads
-      - MAX_FILE_SIZE_MB=50
-      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - APP_API_KEY=${APP_API_KEY:-}
     volumes:
       - chroma-data:/app/chromadb
       - uploads-data:/app/uploads
@@ -27,7 +32,9 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 30s
+    networks:
+      - doc-int-network
 
   frontend:
     build:
@@ -35,20 +42,29 @@ services:
       dockerfile: Dockerfile
     container_name: doc-intelligence-frontend
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=${ENVIRONMENT:-production}
+      - NEXT_PUBLIC_API_URL=http://backend:8000
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
+    networks:
+      - doc-int-network
 
 volumes:
   chroma-data:
     driver: local
   uploads-data:
     driver: local
+
+networks:
+  doc-int-network:
+    driver: bridge

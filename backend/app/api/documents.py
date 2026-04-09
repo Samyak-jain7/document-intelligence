@@ -6,7 +6,7 @@ import uuid
 import logging
 from pathlib import Path
 from typing import List, Optional
-from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Query
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -38,9 +38,9 @@ def validate_file(content: bytes, filename: str) -> None:
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"File type not allowed. Only PDF files are accepted."
+            detail=f"File type not allowed. Only PDF files are accepted. Received: {ext}"
         )
-    
+
     # Magic number check for PDF (%PDF-)
     if not content.startswith(b"%PDF-"):
         raise HTTPException(
@@ -65,10 +65,9 @@ async def upload_document(
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     file_path = settings.upload_dir / unique_filename
 
-    # Save file
     try:
         content = await file.read()
-        
+
         # Validate file
         validate_file(content, file.filename)
 
@@ -121,13 +120,20 @@ async def upload_document(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error uploading document: {e}")
+        logger.error(f"Error uploading document: {e}", extra={
+            "filename": file.filename,
+            "error": str(e)
+        })
         raise HTTPException(status_code=500, detail=f"Error uploading document: {str(e)}")
 
 
-    @router.get("/status/{document_id}", response_model=ProcessingStatusResponse)
+@router.get("/status/{document_id}", response_model=ProcessingStatusResponse)
 async def get_document_status(document_id: str):
     """Get the processing status of a document."""
+    # Validate document_id format (UUID-like)
+    if not document_id or len(document_id) < 8:
+        raise HTTPException(status_code=400, detail="Invalid document ID format")
+
     doc_info = document_store.get_document(document_id)
 
     if not doc_info:
@@ -146,8 +152,11 @@ async def get_document_status(document_id: str):
 
 
 @router.get("/", response_model=DocumentListResponse)
-async def list_documents():
-    """List all uploaded documents."""
+async def list_documents(
+    limit: int = Query(default=100, ge=1, le=500, description="Maximum documents to return"),
+    offset: int = Query(default=0, ge=0, description="Number of documents to skip"),
+):
+    """List all uploaded documents with pagination."""
     documents = document_store.get_all_documents()
 
     doc_infos = []
@@ -165,8 +174,11 @@ async def list_documents():
     # Sort by creation date, newest first
     doc_infos.sort(key=lambda x: x.created_at, reverse=True)
 
+    # Apply pagination
+    paginated = doc_infos[offset:offset + limit]
+
     return DocumentListResponse(
-        documents=doc_infos,
+        documents=paginated,
         total=len(doc_infos),
     )
 
@@ -174,6 +186,9 @@ async def list_documents():
 @router.get("/{document_id}")
 async def get_document(document_id: str):
     """Get details of a specific document."""
+    if not document_id or len(document_id) < 8:
+        raise HTTPException(status_code=400, detail="Invalid document ID format")
+
     doc_info = document_store.get_document(document_id)
 
     if not doc_info:
@@ -185,6 +200,9 @@ async def get_document(document_id: str):
 @router.delete("/{document_id}")
 async def delete_document(document_id: str):
     """Delete a document and all its associated data."""
+    if not document_id or len(document_id) < 8:
+        raise HTTPException(status_code=400, detail="Invalid document ID format")
+
     doc_info = document_store.get_document(document_id)
 
     if not doc_info:

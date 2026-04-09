@@ -4,6 +4,7 @@ Text chunking service for splitting documents into manageable pieces.
 import logging
 from typing import List, Dict, Any
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +14,8 @@ class TextChunker:
 
     def __init__(
         self,
-        chunk_size: int = 1000,
-        chunk_overlap: int = 200,
+        chunk_size: int = None,
+        chunk_overlap: int = None,
         separators: List[str] = None,
     ):
         """
@@ -25,8 +26,8 @@ class TextChunker:
             chunk_overlap: Number of overlapping characters between chunks
             separators: List of separator strings to try splitting on
         """
-        self.chunk_size = chunk_size
-        self.chunk_overlap = chunk_overlap
+        self.chunk_size = chunk_size or settings.chunk_size
+        self.chunk_overlap = chunk_overlap if chunk_overlap is not None else settings.chunk_overlap
 
         if separators is None:
             separators = [
@@ -40,8 +41,8 @@ class TextChunker:
 
         self.text_splitter = RecursiveCharacterTextSplitter(
             separators=separators,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
             length_function=len,
             is_separator_regex=False,
         )
