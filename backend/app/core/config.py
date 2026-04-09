@@ -36,11 +36,15 @@ class Settings(BaseSettings):
     openai_embedding_model: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 
     # CORS
+    frontend_url: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     cors_origins: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3001",
     ]
+
+    # Security
+    app_api_key: str = os.getenv("APP_API_KEY", "")
 
     # ChromaDB Collection
     chroma_collection_name: str = "document_chunks"

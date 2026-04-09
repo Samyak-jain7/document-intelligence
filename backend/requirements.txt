@@ -26,4 +26,4 @@ httpx==0.26.0
 aiofiles==23.2.1
 
 # Async support
-asyncio==3.4.3
+# asyncio is built-in, no need for pip package

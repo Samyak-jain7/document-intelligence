@@ -4,9 +4,11 @@ Document Intelligence API - Main Application
 A FastAPI-based RAG system for document upload, processing, and chat.
 """
 import logging
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.api import documents_router, chat_router, health_router
 
@@ -33,7 +35,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Document Intelligence API...")
 
 
-# Create FastAPI app
+# Configure FastAPI app
 app = FastAPI(
     title="Document Intelligence API",
     description="""
@@ -56,13 +58,34 @@ app = FastAPI(
 )
 
 # Configure CORS
+origins = settings.cors_origins
+if settings.frontend_url and settings.frontend_url not in origins:
+    origins.append(settings.frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_origins=origins if origins != ["*"] else ["*"],
+    allow_credentials=True if origins != ["*"] else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# API Key Middleware
+@app.middleware("http")
+async def api_key_middleware(request: Request, call_next):
+    # Skip auth for health and docs
+    if request.url.path in ["/health", "/docs", "/openapi.json", "/redoc"]:
+        return await call_next(request)
+    
+    if settings.app_api_key:
+        api_key = request.headers.get("X-API-Key")
+        if api_key != settings.app_api_key:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Invalid or missing API Key"}
+            )
+    
+    return await call_next(request)
 
 # Include routers
 app.include_router(health_router)

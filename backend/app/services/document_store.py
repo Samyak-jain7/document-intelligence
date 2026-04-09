@@ -3,6 +3,7 @@ Document store service for managing document metadata.
 """
 import json
 import logging
+import asyncio
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -19,6 +20,7 @@ class DocumentStore:
         """Initialize the document store."""
         self._store_path = settings.base_dir / "document_store.json"
         self._documents: Dict[str, Dict[str, Any]] = {}
+        self._lock = asyncio.Lock()
         self._load()
 
     def _load(self) -> None:
@@ -68,6 +70,7 @@ class DocumentStore:
             "filename": filename,
             "file_size": file_size,
             "status": status.value if isinstance(status, ProcessingStatus) else status,
+            "progress": 0,
             "num_chunks": 0,
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
@@ -102,7 +105,7 @@ class DocumentStore:
         """
         return list(self._documents.values())
 
-    def update_document(
+    async def update_document(
         self,
         document_id: str,
         **updates,
@@ -117,22 +120,23 @@ class DocumentStore:
         Returns:
             Updated document info or None
         """
-        if document_id not in self._documents:
-            return None
+        async with self._lock:
+            if document_id not in self._documents:
+                return None
 
-        updates["updated_at"] = datetime.utcnow().isoformat()
+            updates["updated_at"] = datetime.utcnow().isoformat()
 
-        # Handle status enum
-        if "status" in updates and isinstance(updates["status"], ProcessingStatus):
-            updates["status"] = updates["status"].value
+            # Handle status enum
+            if "status" in updates and isinstance(updates["status"], ProcessingStatus):
+                updates["status"] = updates["status"].value
 
-        self._documents[document_id].update(updates)
-        self._save()
+            self._documents[document_id].update(updates)
+            self._save()
 
-        logger.info(f"Updated document {document_id}: {list(updates.keys())}")
-        return self._documents[document_id]
+            logger.info(f"Updated document {document_id}: {list(updates.keys())}")
+            return self._documents[document_id]
 
-    def delete_document(self, document_id: str) -> bool:
+    async def delete_document(self, document_id: str) -> bool:
         """
         Delete a document from the store.
 
@@ -142,12 +146,13 @@ class DocumentStore:
         Returns:
             True if deleted, False if not found
         """
-        if document_id in self._documents:
-            del self._documents[document_id]
-            self._save()
-            logger.info(f"Deleted document {document_id}")
-            return True
-        return False
+        async with self._lock:
+            if document_id in self._documents:
+                del self._documents[document_id]
+                self._save()
+                logger.info(f"Deleted document {document_id}")
+                return True
+            return False
 
     def get_documents_by_status(
         self,

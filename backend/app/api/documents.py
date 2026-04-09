@@ -29,16 +29,23 @@ ALLOWED_EXTENSIONS = {".pdf"}
 MAX_FILE_SIZE = settings.max_file_size_mb * 1024 * 1024
 
 
-def validate_file(file: UploadFile) -> None:
-    """Validate uploaded file."""
-    if not file.filename:
+def validate_file(content: bytes, filename: str) -> None:
+    """Validate uploaded file content and extension."""
+    if not filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    ext = Path(file.filename).suffix.lower()
+    ext = Path(filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
             detail=f"File type not allowed. Only PDF files are accepted."
+        )
+    
+    # Magic number check for PDF (%PDF-)
+    if not content.startswith(b"%PDF-"):
+        raise HTTPException(
+            status_code=400,
+            detail="File content is not a valid PDF."
         )
 
 
@@ -53,17 +60,17 @@ async def upload_document(
     The document will be processed in the background. Use the status
     endpoint to check processing progress.
     """
-    # Validate file
-    validate_file(file)
-
-    # Generate unique filename to avoid conflicts
-    file_ext = Path(file.filename).suffix.lower()
+    # Generate unique filename to avoid path traversal and conflicts
+    file_ext = Path(file.filename).suffix.lower() if file.filename else ".pdf"
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     file_path = settings.upload_dir / unique_filename
 
     # Save file
     try:
         content = await file.read()
+        
+        # Validate file
+        validate_file(content, file.filename)
 
         # Check file size
         if len(content) > MAX_FILE_SIZE:
@@ -82,13 +89,13 @@ async def upload_document(
         # Create document record
         doc_info = document_store.add_document(
             document_id=document_id,
-            filename=file.filename,
+            filename=file.filename or unique_filename,
             file_size=file_size,
             status=ProcessingStatus.PENDING,
         )
 
         # Update file path in store
-        document_store.update_document(
+        await document_store.update_document(
             document_id=document_id,
             file_path=str(file_path),
         )
@@ -118,7 +125,7 @@ async def upload_document(
         raise HTTPException(status_code=500, detail=f"Error uploading document: {str(e)}")
 
 
-@router.get("/status/{document_id}", response_model=ProcessingStatusResponse)
+    @router.get("/status/{document_id}", response_model=ProcessingStatusResponse)
 async def get_document_status(document_id: str):
     """Get the processing status of a document."""
     doc_info = document_store.get_document(document_id)
@@ -127,14 +134,7 @@ async def get_document_status(document_id: str):
         raise HTTPException(status_code=404, detail="Document not found")
 
     status = doc_info.get("status", ProcessingStatus.PENDING)
-    progress = 0
-
-    if status == ProcessingStatus.COMPLETED.value:
-        progress = 100
-    elif status == ProcessingStatus.PROCESSING.value:
-        progress = 50
-    elif status == ProcessingStatus.FAILED.value:
-        progress = 0
+    progress = doc_info.get("progress", 0)
 
     return ProcessingStatusResponse(
         document_id=document_id,

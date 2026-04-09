@@ -31,24 +31,15 @@ class ProcessingService:
     ) -> Dict[str, Any]:
         """
         Process a PDF document through the entire pipeline.
-
-        Args:
-            file_path: Path to the uploaded file
-            filename: Original filename
-            file_size: File size in bytes
-
-        Returns:
-            Processing result dictionary
         """
-        document_id = str(uuid.uuid4())
+        document_id = file_path.stem
 
         try:
             # Step 1: Create document record
-            document_store.add_document(
+            await document_store.update_document(
                 document_id=document_id,
-                filename=filename,
-                file_size=file_size,
                 status=ProcessingStatus.PROCESSING,
+                progress=10
             )
 
             logger.info(f"Starting processing for document: {document_id}")
@@ -58,6 +49,8 @@ class ProcessingService:
             if not validation["valid"]:
                 raise ValueError(f"Invalid PDF: {validation.get('error', 'Unknown error')}")
 
+            await document_store.update_document(document_id=document_id, progress=30)
+
             # Step 3: Extract text
             logger.info(f"Extracting text from: {filename}")
             text = pdf_processor.extract_text(file_path)
@@ -66,6 +59,7 @@ class ProcessingService:
                 raise ValueError("Extracted text is too short or empty")
 
             logger.info(f"Extracted {len(text)} characters from {filename}")
+            await document_store.update_document(document_id=document_id, progress=50)
 
             # Step 4: Chunk text
             logger.info(f"Chunking text into segments...")
@@ -83,6 +77,7 @@ class ProcessingService:
                 raise ValueError("No chunks created from document")
 
             logger.info(f"Created {len(chunks)} chunks")
+            await document_store.update_document(document_id=document_id, progress=70)
 
             # Step 5: Create LangChain documents
             langchain_docs = embedding_service.create_langchain_documents(chunks)
@@ -90,11 +85,13 @@ class ProcessingService:
             # Step 6: Generate embeddings and store
             logger.info(f"Generating embeddings and storing in vector DB...")
             chunk_ids = vector_store_service.add_documents(langchain_docs)
+            await document_store.update_document(document_id=document_id, progress=90)
 
             # Step 7: Update document record
-            document_store.update_document(
+            await document_store.update_document(
                 document_id=document_id,
                 status=ProcessingStatus.COMPLETED,
+                progress=100,
                 num_chunks=len(chunks),
             )
 
@@ -112,23 +109,19 @@ class ProcessingService:
         except Exception as e:
             logger.error(f"Error processing document {document_id}: {e}")
 
-            document_store.update_document(
+            await document_store.update_document(
                 document_id=document_id,
                 status=ProcessingStatus.FAILED,
+                progress=0,
                 error_message=str(e),
             )
 
-            raise
+            # Don't re-raise here since it's a background task, the status update is enough
+            return {"error": str(e)}
 
-    def delete_document(self, document_id: str) -> bool:
+    async def delete_document(self, document_id: str) -> bool:
         """
         Delete a document and all its chunks.
-
-        Args:
-            document_id: Document ID to delete
-
-        Returns:
-            True if deleted successfully
         """
         try:
             # Delete from vector store
@@ -142,7 +135,7 @@ class ProcessingService:
                 if file_path.exists():
                     file_path.unlink()
 
-            document_store.delete_document(document_id)
+            await document_store.delete_document(document_id)
 
             logger.info(f"Deleted document: {document_id}")
             return True
