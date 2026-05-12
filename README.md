@@ -2,7 +2,7 @@
 
 A full-stack RAG (Retrieval-Augmented Generation) platform for uploading PDF documents, extracting text, and chatting with them using AI-powered semantic search.
 
-![Document Intelligence](https://img.shields.io/badge/AI-RAG-blue) ![Python](https://img.shields.io/badge/Python-3.11-green) ![Next.js](https://img.shields.io/badge/Next.js-14-black) ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-orange)
+![Document Intelligence](https://img.shields.io/badge/AI-RAG-blue) ![Python](https://img.shields.io/badge/Python-3.11-green) ![Next.js](https://img.shields.io/badge/Next.js-14-black) ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-orange) ![CI](https://github.com/Samyak-jain7/document-intelligence/actions/workflows/ci.yml/badge.svg)
 
 ## 🌟 Features
 
@@ -33,29 +33,29 @@ A full-stack RAG (Retrieval-Augmented Generation) platform for uploading PDF doc
 ┌──────────────────────────┼──────────────────────────────────┐
 │                     Backend (FastAPI)                       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
-│  │   Upload     │  │   Chat       │  │   Search     │    │
-│  │   Endpoint   │  │   Endpoint   │  │   Endpoint   │    │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘    │
-│         │                 │                  │             │
-│  ┌──────┴─────────────────┴──────────────────┴───────┐   │
-│  │                   Services Layer                    │   │
+│  │   Upload      │  │   Chat       │  │   Search     │    │
+│  │   Endpoint    │  │   Endpoint   │  │   Endpoint   │    │
+│  └──────┬────────┘  └──────┬────────┘  └──────┬────────┘    │
+│         │                   │                   │             │
+│  ┌──────┴──────────────────┴───────────────────┴────────┐   │
+│  │                   Services Layer                      │   │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐│   │
 │  │  │   PDF     │ │  Text    │ │ Embedding│ │  LLM   ││   │
 │  │  │ Processor │ │ Chunker  │ │ Service  │ │Service ││   │
 │  │  └──────────┘ └──────────┘ └──────────┘ └────────┘│   │
 │  └─────────────────────────┬───────────────────────────┘   │
-│                              │                              │
-│  ┌──────────────────────────┴───────────────────────────┐  │
-│  │                   Vector Store (ChromaDB)             │  │
-│  │         + Document Store (JSON Persistence)            │  │
-│  └───────────────────────────────────────────────────────┘  │
+│                             │                               │
+│  ┌─────────────────────────┴───────────────────────────┐   │
+│  │                   Vector Store (ChromaDB)          │   │
+│  │         + Document Store (JSON Persistence)         │   │
+│  └────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-              ┌────────────────────────┐
-              │     OpenAI API         │
-              │  (Embeddings + GPT-4)   │
-              └────────────────────────┘
+                            │
+                            ▼
+             ┌────────────────────────┐
+             │     OpenAI API         │
+             │  (Embeddings + GPT-4)   │
+             └────────────────────────┘
 ```
 
 ## 📁 Project Structure
@@ -64,15 +64,15 @@ A full-stack RAG (Retrieval-Augmented Generation) platform for uploading PDF doc
 document-intelligence/
 ├── backend/
 │   ├── app/
-│   │   ├── api/           # API routes
+│   │   ├── api/           # API route handlers
 │   │   │   ├── documents.py
 │   │   │   ├── chat.py
 │   │   │   └── health.py
-│   │   ├── core/          # Configuration
+│   │   ├── core/          # Configuration management
 │   │   │   └── config.py
-│   │   ├── models/        # Pydantic schemas
+│   │   ├── models/        # Pydantic request/response schemas
 │   │   │   └── schemas.py
-│   │   ├── services/      # Business logic
+│   │   ├── services/      # Business logic layer
 │   │   │   ├── pdf_processor.py
 │   │   │   ├── text_chunker.py
 │   │   │   ├── embedding_service.py
@@ -80,32 +80,35 @@ document-intelligence/
 │   │   │   ├── llm_service.py
 │   │   │   ├── document_store.py
 │   │   │   └── processing_service.py
-│   │   └── main.py         # FastAPI app
-│   ├── uploads/            # Uploaded files
-│   ├── chromadb/           # ChromaDB data
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
+│   │   └── main.py         # FastAPI application entry
+│   ├── uploads/            # Uploaded PDF files
+│   ├── chromadb/          # ChromaDB persistent data
+│   ├── requirements.txt   # Python dependencies
+│   ├── Dockerfile         # Multi-stage production build
+│   └── .env.example       # Environment variable template
 ├── frontend/
-│   ├── app/
-│   │   ├── page.tsx        # Main page
-│   │   └── layout.tsx      # Root layout
-│   ├── components/
-│   │   ├── ui/             # UI components
+│   ├── app/               # Next.js 14 app directory
+│   │   ├── page.tsx       # Main page
+│   │   └── layout.tsx     # Root layout
+│   ├── components/       # React components
+│   │   ├── ui/            # Radix UI primitives
 │   │   ├── chat-interface.tsx
 │   │   ├── document-list.tsx
 │   │   ├── header.tsx
 │   │   └── upload-zone.tsx
-│   ├── lib/
-│   │   ├── api.ts          # API client
-│   │   ├── store.ts        # Zustand store
-│   │   └── utils.ts        # Utilities
+│   ├── lib/               # Utilities and API client
+│   │   ├── api.ts         # TypeScript API client
+│   │   ├── store.ts       # Zustand state store
+│   │   └── utils.ts       # Helper functions
 │   ├── package.json
-│   ├── tailwind.config.js
-│   ├── Dockerfile
+│   ├── next.config.js
+│   ├── Dockerfile         # Multi-stage production build
 │   └── .env.example
-├── docker-compose.yml
-├── .env.example
+├── .github/
+│   └── workflows/
+│       └── ci.yml          # GitHub Actions CI/CD
+├── docker-compose.yml      # Full stack orchestration
+├── .env.example            # Root env vars template
 └── README.md
 ```
 
@@ -113,8 +116,8 @@ document-intelligence/
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- OpenAI API Key
+- Docker & Docker Compose v2+
+- OpenAI API Key ([Get one here](https://platform.openai.com/api-keys))
 
 ### 1. Clone the Repository
 
@@ -123,21 +126,33 @@ git clone https://github.com/Samyak-jain7/document-intelligence.git
 cd document-intelligence
 ```
 
-### 2. Set Environment Variables
+### 2. Configure Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the project root:
 
 ```bash
-# Get your key from https://platform.openai.com/api-keys
+# Required
 OPENAI_API_KEY=sk-your-api-key-here
+
+# Optional - with defaults
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=200
+MAX_FILE_SIZE_MB=50
+ENVIRONMENT=production
+BACKEND_PORT=8000
+FRONTEND_PORT=3000
 ```
 
 ### 3. Start with Docker Compose
 
 ```bash
+# Build and start all services
 docker-compose up --build
+
+# Run in detached mode
+docker-compose up --build -d
 ```
 
 The application will be available at:
@@ -156,7 +171,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and add your OPENAI_API_KEY
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000
 ```
 
 #### Frontend
@@ -165,6 +180,7 @@ uvicorn app.main:app --reload
 cd frontend
 npm install
 cp .env.example .env.local
+# Set NEXT_PUBLIC_API_URL=http://localhost:8000 in .env.local
 npm run dev
 ```
 
@@ -176,7 +192,15 @@ npm run dev
 GET /health
 ```
 
-Returns the health status of the API and its dependencies.
+Response:
+```json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "chroma_connected": true,
+  "openai_configured": true
+}
+```
 
 ### Upload Document
 
@@ -193,7 +217,7 @@ Response:
   "document_id": "uuid",
   "filename": "document.pdf",
   "status": "pending",
-  "message": "Document uploaded successfully",
+  "message": "Document uploaded successfully. Processing started.",
   "file_size": 1024000
 }
 ```
@@ -207,7 +231,7 @@ GET /documents/status/{document_id}
 ### List Documents
 
 ```bash
-GET /documents/
+GET /documents/?limit=100&offset=0
 ```
 
 ### Delete Document
@@ -261,19 +285,97 @@ Content-Type: application/json
 
 ## 🔧 Configuration
 
-### Backend Environment Variables
+### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `OPENAI_API_KEY` | OpenAI API key | Required |
-| `OPENAI_MODEL` | GPT model for chat | `gpt-4o-mini` |
-| `OPENAI_EMBEDDING_MODEL` | Embedding model | `text-embedding-3-small` |
-| `ENVIRONMENT` | Environment mode | `development` |
-| `HOST` | Server host | `0.0.0.0` |
-| `PORT` | Server port | `8000` |
-| `CHROMA_DB_PATH` | ChromaDB data path | `/app/chromadb` |
-| `UPLOAD_DIR` | Upload storage path | `/app/uploads` |
-| `MAX_FILE_SIZE_MB` | Max upload size (MB) | `50` |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `OPENAI_API_KEY` | OpenAI API key for embeddings and chat | - | **Yes** |
+| `OPENAI_MODEL` | GPT model for chat responses | `gpt-4o-mini` | No |
+| `OPENAI_EMBEDDING_MODEL` | Model for generating embeddings | `text-embedding-3-small` | No |
+| `CHUNK_SIZE` | Target size for text chunks (characters) | `1000` | No |
+| `CHUNK_OVERLAP` | Overlap between chunks (characters) | `200` | No |
+| `MAX_FILE_SIZE_MB` | Maximum upload size in MB | `50` | No |
+| `ENVIRONMENT` | Runtime environment | `development` | No |
+| `DEBUG` | Enable debug mode | `false` | No |
+| `HOST` | Backend server host | `0.0.0.0` | No |
+| `PORT` | Backend server port | `8000` | No |
+| `BACKEND_PORT` | Host port for backend | `8000` | No |
+| `FRONTEND_PORT` | Host port for frontend | `3000` | No |
+| `FRONTEND_URL` | Frontend URL for CORS | `http://localhost:3000` | No |
+| `CHROMA_DB_PATH` | ChromaDB data directory | `/app/chromadb` | No |
+| `UPLOAD_DIR` | File upload directory | `/app/uploads` | No |
+| `APP_API_KEY` | Optional API key for endpoint authentication | - | No |
+
+### Chunking Configuration
+
+The text chunking behavior can be tuned via environment variables:
+
+- `CHUNK_SIZE`: Target number of characters per chunk (100-4000)
+- `CHUNK_OVERLAP`: Number of overlapping characters between chunks (0-1000)
+
+Larger chunks capture more context but may reduce retrieval precision. Overlap helps maintain context across chunk boundaries.
+
+## 🐛 Troubleshooting
+
+### ChromaDB Connection Issues
+
+If you see "ChromaDB not connected", ensure:
+1. The ChromaDB volume is properly mounted in docker-compose
+2. There's no permission issue with the data directory
+
+```bash
+# Fix permissions
+sudo chown -R 1001:1001 backend/chromadb backend/uploads
+```
+
+### OpenAI API Errors
+
+If you get API errors:
+1. Verify your API key is correct and has available credits
+2. Check your OpenAI account has not hit rate limits
+3. Ensure the API key has the right permissions
+
+### PDF Processing Fails
+
+- Ensure the PDF is not password-protected
+- Try a different PDF if extraction fails
+- Check the server logs for specific errors
+- Large PDFs may take longer to process
+
+### Docker Build Fails
+
+If the Docker build fails, ensure you have:
+- Docker Engine 20.10+
+- Docker Compose v2+
+- At least 4GB of available RAM
+
+## 🐳 Deployment
+
+### Docker Compose (Production)
+
+```bash
+# Pull latest changes
+git pull origin main
+
+# Rebuild and restart
+docker-compose down
+docker-compose up --build -d
+
+# View logs
+docker-compose logs -f backend
+docker-compose logs -f frontend
+```
+
+### Environment-Specific Configuration
+
+For production, use environment variables or a `.env` file:
+
+```bash
+# Production environment
+ ENVIRONMENT=production
+ DEBUG=false
+ OPENAI_API_KEY=sk-prod-key-here
+```
 
 ## 🔌 Tech Stack
 
@@ -286,37 +388,11 @@ Content-Type: application/json
 - **OpenAI**: Embeddings and chat
 
 ### Frontend
-- **Next.js 14**: React framework
-- **Tailwind CSS**: Styling
+- **Next.js 14**: React framework with App Router
+- **Tailwind CSS**: Utility-first styling
 - **Zustand**: State management
-- **Radix UI**: UI primitives
+- **Radix UI**: UI component primitives
 - **React Dropzone**: File uploads
-
-## 🐛 Troubleshooting
-
-### ChromaDB Connection Issues
-
-If you see "ChromaDB not connected", ensure:
-1. The ChromaDB volume is properly mounted
-2. There's no permission issue with the data directory
-
-```bash
-# Fix permissions
-sudo chown -R 1001:1001 backend/chromadb backend/uploads
-```
-
-### OpenAI API Errors
-
-If you get API errors:
-1. Verify your API key is correct
-2. Check your OpenAI account has available credits
-3. Ensure the API key has the right permissions
-
-### PDF Processing Fails
-
-- Ensure the PDF is not password-protected
-- Try a different PDF if extraction fails
-- Check the server logs for specific errors
 
 ## 📝 License
 
@@ -324,7 +400,11 @@ MIT License - feel free to use this project for personal or commercial purposes.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📧 Contact
 
